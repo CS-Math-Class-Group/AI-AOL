@@ -107,20 +107,48 @@ The system follows a microservices architecture with the following components:
 
 ### Component Details
 
-1. **n8n Workflow Orchestrator**: Manages the entire pipeline, handles file uploads, and coordinates between services
-2. **Go/Gin API Gateway**: High-performance API layer that routes requests and manages authentication
-3. **Python/Django OMR Engine**: Core OMR processing using computer vision and machine learning models
-4. **Agentic AI Layer**: LLM-powered agents that interpret musical structure and generate code
-5. **Code Generator**: Converts interpreted music into executable formats (Sonic Pi, MIDI)
+The system follows a **microservices architecture** where each service is independently deployable and communicates through well-defined APIs:
+
+1. **n8n Workflow Orchestrator**: Manages the entire pipeline, handles file uploads, and coordinates between microservices through HTTP/REST APIs and webhooks
+2. **Go/Gin API Gateway** (Microservice): 
+   - Acts as the single entry point for all client requests (API Gateway pattern)
+   - High-performance reverse proxy and request router
+   - Handles authentication, rate limiting, and request validation
+   - Routes requests to appropriate microservices (Python OMR, AI agents)
+   - Implements service discovery and load balancing
+3. **Python/Django OMR Engine** (Microservice):
+   - Independent service focused solely on optical music recognition
+   - Exposes REST API endpoints consumed by the API Gateway
+   - Core OMR processing using computer vision and machine learning models
+   - Containerized with its own database and dependencies
+4. **Agentic AI Layer** (Microservice):
+   - Separate service for LLM-powered agents
+   - Interprets musical structure and generates code
+   - Can be scaled independently based on AI processing demand
+5. **Code Generator** (Microservice):
+   - Dedicated service for converting interpreted music into executable formats
+   - Generates Sonic Pi and MIDI files
+   - Maintains its own output processing pipeline
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Backend Services
-- **Go 1.21+** with **Gin** framework - High-performance API gateway
-- **Python 3.11+** with **Django 4.2+** - OMR processing engine
-- **n8n** - Workflow automation and orchestration
+### Backend Services (Microservices Architecture)
+- **Go 1.21+** with **Gin** framework - API Gateway microservice
+  - Service discovery and routing
+  - Authentication and authorization
+  - Request aggregation and transformation
+  - Rate limiting and circuit breaking
+- **Python 3.11+** with **Django 4.2+** - OMR Processing microservice
+  - Independent service with REST API endpoints
+  - Computer vision and ML model serving
+  - Separate database instance
+  - Horizontally scalable
+- **n8n** - Workflow orchestration layer
+  - Coordinates microservices communication
+  - Implements saga pattern for distributed transactions
+  - Event-driven architecture support
 
 ### AI & Machine Learning
 - **Large Language Models (LLMs)** - GPT-4, Claude, or open-source alternatives

@@ -1,0 +1,12 @@
+fastapi[standard]
+uvicorn[standard]
+oemer
+opencv-python
+music21
+langgraph
+ollama
+python-multipart
+sqlalchemy
+databases[sqlite]
+aiofiles
+httpx

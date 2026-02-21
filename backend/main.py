@@ -79,8 +79,10 @@ async def upload(file: UploadFile = File(...)):
             "pages": [
                 {
                     "page":         p["page"],
+                    "img_id":       p.get("img_id"),
                     "has_musicxml": p["musicxml_path"] is not None,
                     "has_midi":     p["midi_path"] is not None,
+                    "cached":       p.get("cached", False),
                     "errors":       p["errors"],
                 }
                 for p in result.get("pages", [])
@@ -113,6 +115,33 @@ async def stream_midi(file_id: str):
     )
 
 
+@app.get("/midi/{file_id}/{page}")
+async def stream_midi_page(file_id: str, page: int):
+    """Stream the MIDI for a specific page (1-based) of a multi-page upload."""
+    entry = get_file(file_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="File ID not found or expired.")
+
+    pages: list[dict] = entry.get("pages", [])
+    page_entry = next((p for p in pages if p["page"] == page), None)
+    if page_entry is None:
+        raise HTTPException(status_code=404, detail=f"Page {page} not found.")
+
+    midi_path = page_entry.get("midi_path")
+    if not midi_path or not os.path.exists(midi_path):
+        raise HTTPException(status_code=404, detail=f"MIDI for page {page} is not available.")
+
+    def iter_file():
+        with open(midi_path, "rb") as f:
+            yield from f
+
+    return StreamingResponse(
+        iter_file(),
+        media_type="audio/midi",
+        headers={"Content-Disposition": f"inline; filename=page_{page}.mid"},
+    )
+
+
 @app.get("/musicxml/{file_id}")
 async def stream_xml(file_id: str):
     entry = get_file(file_id)
@@ -131,6 +160,33 @@ async def stream_xml(file_id: str):
         iter_file(),
         media_type="application/xml",
         headers={"Content-Disposition": "inline; filename=result.musicxml"},
+    )
+
+
+@app.get("/musicxml/{file_id}/{page}")
+async def stream_xml_page(file_id: str, page: int):
+    """Stream the MusicXML for a specific page (1-based) of a multi-page upload."""
+    entry = get_file(file_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="File ID not found or expired.")
+
+    pages: list[dict] = entry.get("pages", [])
+    page_entry = next((p for p in pages if p["page"] == page), None)
+    if page_entry is None:
+        raise HTTPException(status_code=404, detail=f"Page {page} not found.")
+
+    musicxml_path = page_entry.get("musicxml_path")
+    if not musicxml_path or not os.path.exists(musicxml_path):
+        raise HTTPException(status_code=404, detail=f"MusicXML for page {page} is not available.")
+
+    def iter_file():
+        with open(musicxml_path, "rb") as f:
+            yield from f
+
+    return StreamingResponse(
+        iter_file(),
+        media_type="application/xml",
+        headers={"Content-Disposition": f"inline; filename=page_{page}.musicxml"},
     )
 
 @app.get("/musicxml/json/{file_id}")

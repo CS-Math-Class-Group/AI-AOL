@@ -65,14 +65,26 @@ async def upload(file: UploadFile = File(...)):
             "musicxml_path": result["musicxml_path"],
             "midi_path":     result["midi_path"],
             "output_dir":    result["output_dir"],
+            "page_count":    result.get("page_count", 1),
+            "pages":         result.get("pages", []),
         })
 
         return JSONResponse(content={
             "status_code":  200,
             "file_id":      file_id,
+            "page_count":   result.get("page_count", 1),
             "has_musicxml": result["musicxml_path"] is not None,
             "has_midi":     result["midi_path"] is not None,
             "cached":       result["cached"],
+            "pages": [
+                {
+                    "page":         p["page"],
+                    "has_musicxml": p["musicxml_path"] is not None,
+                    "has_midi":     p["midi_path"] is not None,
+                    "errors":       p["errors"],
+                }
+                for p in result.get("pages", [])
+            ],
             "expires_in":   f"{FILE_TTL_SECONDS//60} minutes",
         })
 

@@ -4,7 +4,7 @@
 
 An intelligent Optical Music Recognition (OMR) system that uses Agentic AI to transform sheet music into live coding languages and MIDI files in real-time.
 
-**Created by**: Weneville, Nathanael Romaloburju, and Robben Wijanathan
+**Created by**: Weneville, Nathanael Romaloburju, Robben Wijanathan, and Evorius Valens Taruna
 
 ---
 

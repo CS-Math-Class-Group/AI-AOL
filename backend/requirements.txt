@@ -10,3 +10,5 @@ sqlalchemy
 databases[sqlite]
 aiofiles
 httpx
+xmltodict
+pdf2image

@@ -5,11 +5,15 @@ import shutil
 import uuid
 import os
 from pathlib import Path
-from backend.omr.preprocessor import preprocess_image
 from music21 import converter
+import cv2
+import numpy as np
+from pdf2image import convert_from_path
 
 OMR_TEMP_BASE = "/tmp/aiaol_omr"
 os.makedirs(OMR_TEMP_BASE, exist_ok=True)
+
+SUPPORTED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".gif"}
 
 
 
@@ -33,8 +37,23 @@ def _find_file(directory: str, extension: str) -> str | None:
 
 
 
-def _run_preprocess(input_path: str, preprocessed_path: str) -> None:
-    preprocess_image(input_path, preprocessed_path)
+def _prepare_image(input_path: str, job_dir: str) -> str:
+    """Convert PDF to PNG if needed, otherwise return original path.
+    oemer expects raw, unmodified images — no preprocessing applied."""
+    ext = os.path.splitext(input_path)[-1].lower()
+
+    if ext == ".pdf":
+        pages = convert_from_path(input_path, dpi=300)
+        if not pages:
+            raise ValueError(f"No pages found in PDF: {input_path}")
+        png_path = os.path.join(job_dir, "page.png")
+        img = cv2.cvtColor(np.array(pages[0]), cv2.COLOR_RGB2BGR)
+        cv2.imwrite(png_path, img)
+        return png_path
+    elif ext in SUPPORTED_IMAGE_EXTS:
+        return input_path
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
 
 
 def _run_extract(args: Namespace) -> None:
@@ -72,16 +91,13 @@ async def run_omr(input_path: str, job_id: str | None = None) -> dict:
         }
 
     os.makedirs(job_dir, exist_ok=True)
-    preprocessed_path = os.path.join(job_dir, "preprocessed.png")
     loop = asyncio.get_event_loop()
 
     try:
-    # Preprocess image (cv2 — blocking I/O + CPU)
-        await loop.run_in_executor(None, _run_preprocess, input_path, preprocessed_path)
+        img_path = await loop.run_in_executor(None, _prepare_image, input_path, job_dir)
 
-    # Run oemer OMR engine (heavy CPU — must not block event loop)
         args = Namespace(
-            img_path=preprocessed_path,
+            img_path=img_path,
             output_path=job_dir,
             use_tf=False,           # use tensorflow or not
             save_cache=False,       # do not persist intermediate cache
